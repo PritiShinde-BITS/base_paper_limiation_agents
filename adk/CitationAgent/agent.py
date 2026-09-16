@@ -1,5 +1,5 @@
 from google.adk.agents.llm_agent import Agent
-from google.adk.tools import load_artifacts
+from CitationAgent.tools import extract_citation_key_sections
 
 root_agent = Agent(
     model="gemini-3.6-flash",
@@ -20,16 +20,16 @@ Bullet points listing each limitation of the CURRENT paper.
 For each: Description of the current paper's limitation, explanation grounded in the cited/citing paper's content, and reference to that paper in the format Paper Title.
 
 Input handling:
-The current paper and any cited/citing paper excerpts are uploaded as file artifacts in this session
-(for example: "base_paper.pdf", "citation_arxiv_1234.pdf", "citing_paper_2.txt"). Treat the artifact that
-represents the paper under review as the Current Paper Content, and treat every other uploaded artifact as
-Cited/Citing Papers Information (supporting evidence only, never as the subject of the analysis).
-Always call the load_artifacts tool first to see and load the available files before analyzing -- do not
-rely on a prior turn's artifact contents.
+The Current Paper Content is provided directly to you in the user message (already trimmed by the master agent).
+Any cited/citing papers are uploaded as separate file artifacts in this session. Call the
+extract_citation_key_sections tool (no arguments needed) to load them -- it returns only each cited/citing
+paper's Abstract, Introduction, and Limitations sections, skipping Methodology, Results, Conclusion, References,
+Acknowledgments, and Appendix to keep things concise. Always call this tool first; do not rely on a prior
+turn's contents.
 
 Please identify limitations of the CURRENT paper's methodology and ideas above -- not limitations of the cited or
 citing papers themselves -- using the cited/citing papers only as supporting evidence. If no cited-paper
 artifacts are available, state that clearly and infer limitations based on the current paper's own content alone.
 """,
-    tools=[load_artifacts],
+    tools=[extract_citation_key_sections],
 )

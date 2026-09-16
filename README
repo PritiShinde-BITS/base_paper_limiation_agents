@@ -1,1 +1,105 @@
+# Base Paper Limitation Agents
+
+Multi-agent pipeline that reads a scientific paper and produces a synthesized, non-redundant,
+numbered list of its limitations -- combining explicit author-stated limitations, inferred
+methodological/theoretical/robustness/reproducibility/presentation issues, and limitations
+grounded in the paper's cited/citing works.
+
+
+ **`adk/`** -- an interactive Google ADK multi-agent app (`adk web` / `adk run`), driven by
+   file uploads (base paper + optional citation papers).
+
+
+---
+
+## What the ADK pipeline does (`adk/`)
+
+`adk/MasterAgent` is the root agent (`master_orchestrator_agent`) and orchestrates 3 specialist
+sub-agents, then synthesizes their outputs itself into the final limitations list:
+
+- **`content_limitations_agent`** ([adk/ContentLimitationsAgent](adk/ContentLimitationsAgent)) --
+  combines explicit limitations (verbatim, author-stated), inferred limitations (critical
+  methodological analysis), and open peer-review style limitations.
+- **`technical_audit_agent`** ([adk/TechnicalAuditAgent](adk/TechnicalAuditAgent)) -- audits
+  theory & assumptions, baselines/novelty/comparability, robustness/failure modes/ablations,
+  reproducibility/compute/scalability, and presentation/clarity/impact.
+- **`citation_agent`** ([adk/CitationAgent](adk/CitationAgent)) -- identifies limitations of the
+  current paper's own methodology grounded in evidence from papers it cites and papers that cite
+  it.
+
+Master (`master_orchestrator_agent`, in [adk/MasterAgent/agent.py](adk/MasterAgent/agent.py)):
+
+1. Finds the uploaded base paper artifact (filename must contain `"base"`, e.g.
+   `base_paper.pdf`) and calls the `extract_main_paper_content` tool
+   ([adk/MasterAgent/tools.py](adk/MasterAgent/tools.py)) to trim it down to just the main
+   content -- through Conclusion, Limitations, and Ethical/Broader Impact Statement -- dropping
+   References, Bibliography, Acknowledgments, and Appendix to save tokens/cost.
+2. Passes only that trimmed text to `content_limitations_agent` and `technical_audit_agent`.
+3. Lets `citation_agent` load any other uploaded artifacts itself (filenames without `"base"`
+   are treated as cited/citing papers) via the `extract_citation_key_sections` tool
+   ([adk/CitationAgent/tools.py](adk/CitationAgent/tools.py)), which trims each one down to just
+   its Abstract, Introduction, and Limitations sections.
+4. Collects all three specialist outputs and merges them itself into one final, de-duplicated,
+   numbered list -- no separate merger/critic agent call is needed.
+
+Other agent folders under `adk/` (`ExtractorAgent`, `AnalyzerAgent`, `ReviewerAgent`,
+`TheoryAssumptionsAgent`, `BaselinesNoveltyAgent`, `RobustnessFailureAgent`,
+`ReproducibilityComputeAgent`, `PresentationClarityAgent`, `MergerAgent`, `GenericAgent`) are
+legacy/unused by `MasterAgent` -- kept for reference, safe to delete if not needed.
+
+---
+
+## Setup
+
+```bash
+# 1. Create and activate a virtual environment (from the repo root)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure your Gemini API key for the ADK app
+#    (adk/.env is already git-ignored)
+cat > adk/.env <<'EOF'
+GOOGLE_GENAI_USE_VERTEXAI=0
+GOOGLE_API_KEY=your-gemini-api-key-here
+EOF
+```
+
+---
+
+## Running the ADK web UI
+
+```bash
+source .venv/bin/activate
+cd adk
+adk web
+```
+
+- Open the URL printed in the terminal (default `http://localhost:8000`).
+- In the top-left agent dropdown, select **`MasterAgent`**.
+- In the chat panel, attach your files:
+  - The paper to analyze, with a filename containing `"base"` (e.g. `base_paper.pdf`).
+  - Optionally, one or more cited/citing paper files (any other filename, e.g.
+    `citation_arxiv_1234.pdf`).
+- Send a message (e.g. "Analyze the limitations of this paper") and the Master agent will run
+  the full pipeline and return the final numbered limitations list.
+
+Alternative: run a single agent directly from the terminal instead of the web UI:
+
+```bash
+cd adk
+adk run MasterAgent
+```
+
+---
+
+
+
+## Security note
+
+Never commit `adk/.env` (it holds your `GOOGLE_API_KEY`) -- it's already listed in
+[.gitignore](.gitignore). If a key is ever exposed in git history or shared publicly, rotate it
+immediately in Google AI Studio / Google Cloud Console.
 
