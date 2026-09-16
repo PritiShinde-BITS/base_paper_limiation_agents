@@ -1,0 +1,286 @@
+
+# Vodafone CX Research Multi-Agent System
+
+## Overview
+
+This project demonstrates a Multi-Agent Customer Experience (CX) Research Assistant built using Google's Agent Development Kit (ADK).
+
+The system analyzes customer experience data from multiple sources such as:
+
+* Customer complaints
+* Call center transcripts
+* Customer feedback and NPS data
+* Telecom industry research
+
+The solution uses a Master Orchestrator Agent to route requests to specialized agents and a Critic Agent to validate findings and generate an executive summary.
+
+---
+
+## Architecture
+
+```text
+                    User Request
+                          |
+                          v
+
+                Master Orchestrator Agent
+                          |
+        ----------------------------------------
+        |                  |                   |
+        v                  v                   v
+
+Customer Service    Call Center       Generic Research
+      Agent            Agent               Agent
+
+        ----------------------------------------
+                          |
+                          v
+
+                    Critic Agent
+          (Validation & Synthesis Layer)
+
+                          |
+                          v
+
+                  Executive Summary
+```
+
+### Agents
+
+#### Master Orchestrator Agent
+
+Responsible for:
+
+* Understanding the user request
+* Selecting the appropriate specialist agent(s)
+* Delegating tasks
+* Forwarding findings to the Critic Agent
+
+#### Customer Service Agent
+
+Analyzes:
+
+* Customer complaints
+* Customer feedback
+* NPS responses
+* Churn indicators
+* Customer sentiment
+
+#### Call Center Agent
+
+Analyzes:
+
+* Call transcripts
+* Escalation patterns
+* Resolution effectiveness
+* Customer frustration indicators
+* Operational issues
+
+#### Generic Research Agent
+
+Performs:
+
+* Telecom industry research
+* Competitor benchmarking
+* Market intelligence gathering
+* CX best-practice analysis
+
+#### Critic Agent
+
+Responsible for:
+
+* Validating findings
+* Detecting unsupported claims
+* Resolving conflicting conclusions
+* Assigning confidence scores
+* Producing the final executive summary
+
+---
+
+## Prerequisites
+
+* Python 3.10+
+* Google ADK
+* Gemini API Key
+
+---
+
+## Setup Instructions
+
+### Create Virtual Environment
+
+```bash
+python -m venv vois_research_agent_env
+```
+
+### Activate Virtual Environment
+
+Linux / macOS:
+
+```bash
+source vois_research_agent_env/bin/activate
+```
+
+Windows:
+
+```bash
+vois_research_agent_env\Scripts\activate
+```
+
+### Install Dependencies
+
+
+pip install -r requirements.txt
+
+
+
+## Configure Gemini API Key
+
+If you don't already have an API key, create one using Google AI Studio:
+
+https://aistudio.google.com/apikey
+
+Create a `.env` file in the project root directory:
+
+```env
+GOOGLE_API_KEY=YOUR_API_KEY_HERE
+```
+
+---
+
+## Sample Data
+
+The project includes sample datasets:
+
+### Customer Complaints
+
+```text
+customer_complaints.csv
+```
+
+### Call Center Transcripts
+
+```text
+call_center_transcripts.csv
+```
+
+### Industry Research
+
+```text
+telecom_industry_data.csv
+```
+
+---
+
+## Running the Agent
+
+Start the ADK application:
+
+Naviagate to the project adk directory and run:
+```bash
+adk web
+```
+
+or
+
+```bash
+adk run
+```
+
+---
+
+## Example Query
+
+```text
+Analyze the reasons for increasing customer dissatisfaction at Vodafone.
+Use customer complaints, call center transcripts, and industry research data.
+```
+
+---
+
+## Example Output
+
+```text
+Executive Summary
+
+Customer dissatisfaction is primarily driven by:
+
+1. Network reliability issues
+2. Delayed ticket resolution
+3. Billing disputes
+
+Key Findings
+
+Network Issues
+Confidence: High
+
+Support Delays
+Confidence: High
+
+Billing Problems
+Confidence: Medium
+
+Recommendations
+
+- Improve network stability
+- Reduce resolution time
+- Strengthen billing support
+```
+
+---
+
+## Project Structure
+
+```text
+project_root/
+
+├── agents/
+│   ├── master_agent.py
+│   ├── customer_service_agent.py
+│   ├── call_center_agent.py
+│   ├── generic_agent.py
+│   └── critic_agent.py
+│
+├── tools/
+│   └── save_csv.py
+│
+├── data/
+│   ├── customer_complaints.csv
+│   ├── call_center_transcripts.csv
+│   └── telecom_industry_data.csv
+│
+├── artifacts/
+│
+├── .env
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Key Features
+
+* Multi-Agent Architecture
+* Customer Experience Analytics
+* Call Center Insight Generation
+* Churn Risk Identification
+* Industry Benchmarking
+* Hallucination Detection
+* Confidence Scoring
+* Executive Summary Generation
+* Google ADK Integration
+
+---
+
+## Future Enhancements
+
+* Integration with Vector Databases (FAISS/Chroma)
+* RAG-based Knowledge Retrieval
+* Dashboard Visualizations
+* Real-Time Telecom Analytics
+* Multimodal Support for Charts and Images
+* Automated Report Generation
+* Agent Memory and Feedback Loops
+
+```
+```
