@@ -1,8 +1,11 @@
+# agent.py
 from google.adk.agents.llm_agent import Agent
 from CitationAgent.tools import extract_citation_key_sections
+from google.adk.models.lite_llm import LiteLlm
+import os
 
 root_agent = Agent(
-    model="gemini-3.6-flash",
+    model=LiteLlm(model="ollama_chat/qwen2.5:14b"),
     name="citation_agent",
     description="Identifies limitations of the current paper's own methodology, grounded in its cited/citing papers.",
     instruction="""
@@ -20,16 +23,18 @@ Bullet points listing each limitation of the CURRENT paper.
 For each: Description of the current paper's limitation, explanation grounded in the cited/citing paper's content, and reference to that paper in the format Paper Title.
 
 Input handling:
-The Current Paper Content is provided directly to you in the user message (already trimmed by the master agent).
-Any cited/citing papers are uploaded as separate file artifacts in this session. Call the
-extract_citation_key_sections tool (no arguments needed) to load them -- it returns only each cited/citing
-paper's Abstract, Introduction, and Limitations sections, skipping Methodology, Results, Conclusion, References,
-Acknowledgments, and Appendix to keep things concise. Always call this tool first; do not rely on a prior
-turn's contents.
+The Current Paper Content (the base paper) is provided directly to you in the user message by the master agent --
+it is never read from disk or from a tool call.
+Cited/citing papers live in this repo's citation folder, NOT as session artifacts. Call the
+extract_citation_key_sections tool (no arguments needed) to load them -- it walks the citation folder file by
+file and returns only each cited/citing paper's Introduction and Limitations sections, skipping Abstract,
+Methodology, Results, Conclusion, References, Acknowledgments, and Appendix to keep things concise. Always call
+this tool first; do not rely on a prior turn's contents.
 
 Please identify limitations of the CURRENT paper's methodology and ideas above -- not limitations of the cited or
-citing papers themselves -- using the cited/citing papers only as supporting evidence. If no cited-paper
-artifacts are available, state that clearly and infer limitations based on the current paper's own content alone.
+citing papers themselves -- using the cited/citing papers only as supporting evidence. If no citation files are
+found in the citation folder, state that clearly and infer limitations based on the current paper's own content
+alone.
 """,
     tools=[extract_citation_key_sections],
 )

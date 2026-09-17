@@ -1,13 +1,26 @@
-"""Trims cited/citing paper artifacts down to only Abstract, Introduction, and
-Limitations sections, dropping Methodology, Results, Conclusion, References,
-Acknowledgments, and Appendix to cut token usage."""
+# tools.py
+"""Reads every cited/citing paper PDF from the repo's citation folder (one file
+at a time) and returns only its Introduction and Limitations sections, dropping
+Abstract, Methodology, Results, Conclusion, References, Acknowledgments, and
+Appendix to cut token usage.
+
+The base paper is NOT handled here -- it's passed directly to the agent by the
+master agent in the user message.
+"""
 
 import io
+import os
 import re
 
-from google.adk.tools.tool_context import ToolContext
+# Citation folder, relative to this file's location in the repo:
+#   CitationAgent/tools.py -> CitationAgent/citations/
+# Override with the CITATION_FOLDER_PATH env var if the folder lives elsewhere.
+_CITATION_DIR = os.environ.get(
+    "CITATION_FOLDER_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "citations"),
+)
 
-_KEEP_SECTIONS = {"abstract", "introduction", "limitations", "limitation"}
+_KEEP_SECTIONS = {"introduction", "limitations", "limitation"}
 
 # Matches a standalone section-heading line (optionally numbered).
 _HEADING_RE = re.compile(
@@ -19,26 +32,20 @@ _HEADING_RE = re.compile(
 )
 
 
-def _extract_pdf_text(data: bytes) -> str:
+def _extract_pdf_text(path: str) -> str:
     from pypdf import PdfReader
 
-    reader = PdfReader(io.BytesIO(data))
+    reader = PdfReader(path)
     return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
 def _extract_key_sections(text: str) -> str:
-    """Keeps only the Abstract, Introduction, and Limitations sections of `text`."""
+    """Keeps only the Introduction and Limitations sections of `text`."""
     matches = list(_HEADING_RE.finditer(text))
     if not matches:
         return text.strip()
 
     kept = []
-
-    # Text before the first heading is usually the (unlabeled) abstract.
-    first_heading = matches[0].group(1).strip().lower()
-    if first_heading != "abstract" and text[: matches[0].start()].strip():
-        kept.append(text[: matches[0].start()].strip())
-
     for i, m in enumerate(matches):
         heading = m.group(1).strip().lower()
         if heading not in _KEEP_SECTIONS:
@@ -49,43 +56,46 @@ def _extract_key_sections(text: str) -> str:
     return "\n\n".join(kept).strip()
 
 
-async def extract_citation_key_sections(tool_context: ToolContext) -> dict:
-    """Loads every uploaded citation artifact (cited/citing papers) and returns
-    only their Abstract, Introduction, and Limitations sections.
+def extract_citation_key_sections() -> dict:
+    """Walks the repo's citation folder and, for each PDF found, extracts only
+    its Introduction and Limitations sections.
 
-    Skips the base paper artifact (filename containing "base") and drops
-    everything else (Methodology, Results, Conclusion, References, Appendix, etc.)
-    from the remaining artifacts.
+    Files are read one at a time from `_CITATION_DIR` (a folder relative to
+    this repo, overridable via the CITATION_FOLDER_PATH env var). The base
+    paper is intentionally excluded here -- it's provided to the agent
+    directly by the master agent -- but any filename containing "base" is
+    also skipped defensively in case it ends up in the folder.
 
     Returns:
-        A dict mapping each citation artifact filename to its trimmed sections.
+        A dict mapping each citation filename to its trimmed sections.
     """
-    artifact_names = await tool_context.list_artifacts()
-    citation_names = [n for n in artifact_names if "base" not in n.lower()]
+    if not os.path.isdir(_CITATION_DIR):
+        return {
+            "status": "error",
+            "citation_papers": {},
+            "message": f"Citation folder not found: {_CITATION_DIR}",
+        }
 
-    if not citation_names:
+    citation_files = sorted(
+        f for f in os.listdir(_CITATION_DIR)
+        if f.lower().endswith(".pdf") and "base" not in f.lower()
+    )
+
+    if not citation_files:
         return {
             "status": "success",
             "citation_papers": {},
-            "message": "No cited/citing paper artifacts found.",
+            "message": f"No citation PDFs found in {_CITATION_DIR}.",
         }
 
     citation_papers = {}
-    for name in citation_names:
-        artifact = await tool_context.load_artifact(name)
-        if artifact is None or artifact.inline_data is None:
+    for filename in citation_files:
+        path = os.path.join(_CITATION_DIR, filename)
+        try:
+            text = _extract_pdf_text(path)
+        except Exception as exc:
+            citation_papers[filename] = f"[error reading file: {exc}]"
             continue
-
-        mime_type = artifact.inline_data.mime_type or ""
-        data = artifact.inline_data.data
-
-        if "pdf" in mime_type:
-            text = _extract_pdf_text(data)
-        elif isinstance(data, (bytes, bytearray)):
-            text = data.decode("utf-8", errors="ignore")
-        else:
-            text = str(data)
-
-        citation_papers[name] = _extract_key_sections(text)
+        citation_papers[filename] = _extract_key_sections(text)
 
     return {"status": "success", "citation_papers": citation_papers}

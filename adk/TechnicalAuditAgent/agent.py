@@ -1,5 +1,6 @@
 from google.adk.agents.llm_agent import Agent
-
+from google.adk.models.lite_llm import LiteLlm
+import os
 root_agent = Agent(
     model="gemini-3.6-flash",
     name="technical_audit_agent",
